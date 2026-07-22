@@ -1,31 +1,40 @@
+console.log('popup.js loading...');
+
 // Функция для сортировки вкладок
 function sortTabs(tabs, method = 'byTitle') {
+  // Вспомогательная функция для безопасного сравнения строк
+  const safeCompare = (str1, str2) => {
+    const s1 = str1 || '';
+    const s2 = str2 || '';
+    return s1.localeCompare(s2);
+  };
+
   // Методы сортировки
   const sortMethods = {
-    byTitle: (a, b) => a.title.localeCompare(b.title),
+    byTitle: (a, b) => safeCompare(a.title, b.title),
     byDomain: (a, b) => {
       try {
-        const domainA = new URL(a.url).hostname;
-        const domainB = new URL(b.url).hostname;
-        return domainA.localeCompare(domainB) || a.title.localeCompare(b.title);
+        const domainA = new URL(a.url || '').hostname;
+        const domainB = new URL(b.url || '').hostname;
+        return safeCompare(domainA, domainB) || safeCompare(a.title, b.title);
       } catch (e) {
         // Если URL некорректный, сортируем по заголовку
-        return a.title.localeCompare(b.title);
+        return safeCompare(a.title, b.title);
       }
     },
     byLastAccessed: (a, b) => (b.lastAccessed || 0) - (a.lastAccessed || 0),
     byFavicon: (a, b) => {
-      const iconComparison = (a.favIconUrl || "").localeCompare(b.favIconUrl || "");
-      return iconComparison !== 0 ? iconComparison : a.title.localeCompare(b.title);
+      const iconComparison = safeCompare(a.favIconUrl, b.favIconUrl);
+      return iconComparison !== 0 ? iconComparison : safeCompare(a.title, b.title);
     },
     byProtocol: (a, b) => {
       try {
-        const protocolA = new URL(a.url).protocol;
-        const protocolB = new URL(b.url).protocol;
-        return protocolA.localeCompare(protocolB) || a.title.localeCompare(b.title);
+        const protocolA = new URL(a.url || '').protocol;
+        const protocolB = new URL(b.url || '').protocol;
+        return safeCompare(protocolA, protocolB) || safeCompare(a.title, b.title);
       } catch (e) {
         // Если URL некорректный, сортируем по заголовку
-        return a.title.localeCompare(b.title);
+        return safeCompare(a.title, b.title);
       }
     }
   };
@@ -71,7 +80,8 @@ function getSettings() {
       sortMethod: 'byTitle',
       autoSort: false,
       showNotifications: true,
-      groupTabs: false
+      groupTabs: false,
+      closeTabs: true
     }, (items) => {
       resolve(items);
     });
@@ -95,6 +105,7 @@ async function loadSettings() {
   document.getElementById('sort-method').value = settings.sortMethod;
   document.getElementById('auto-sort').checked = settings.autoSort;
   document.getElementById('show-notifications').checked = settings.showNotifications;
+  document.getElementById('close-tabs').checked = settings.closeTabs;
   
   return settings;
 }
@@ -105,7 +116,8 @@ async function saveSettingsFromForm() {
     sortMethod: document.getElementById('sort-method').value,
     autoSort: document.getElementById('auto-sort').checked,
     showNotifications: document.getElementById('show-notifications').checked,
-    groupTabs: false // Пока не реализовано в UI
+    groupTabs: false, // Пока не реализовано в UI
+    closeTabs: document.getElementById('close-tabs').checked
   };
   
   await saveSettings(settings);
@@ -115,13 +127,14 @@ async function saveSettingsFromForm() {
 // Функция для показа статуса
 function showStatus(message, show = true) {
   const statusElement = document.getElementById('status');
-  statusElement.textContent = message;
+  const techMessage = show ? `[ ${message.toUpperCase()} ]` : '';
+  statusElement.textContent = techMessage;
   statusElement.classList.toggle('hidden', !show);
 }
 
 // Функция для сортировки вкладок
 async function sortTabsHandler() {
-  showStatus('Сортировка...');
+  showStatus('sorting');
   
   try {
     // Получаем текущие настройки
@@ -148,16 +161,16 @@ async function sortTabsHandler() {
       });
     }
     
-    showStatus('Готово!', false);
+    showStatus('done', false);
   } catch (error) {
-    console.error('Ошибка при сортировке вкладок:', error);
-    showStatus('Ошибка сортировки', false);
+    console.warn('Ошибка при сортировке вкладок:', error.message);
+    showStatus('error: sort failed', false);
   }
 }
 
 // Функция для группировки вкладок
 async function groupTabsHandler() {
-  showStatus('Группировка...');
+  showStatus('grouping');
   
   try {
     // Получаем все вкладки
@@ -201,24 +214,189 @@ async function groupTabsHandler() {
       });
     }
     
-    showStatus('Готово!', false);
+    showStatus('done', false);
   } catch (error) {
-    console.error('Ошибка при группировке вкладок:', error);
-    showStatus('Ошибка группировки', false);
+    console.warn('Ошибка при группировке вкладок:', error.message);
+    showStatus('error: group failed', false);
+  }
+}
+
+// Функция для записи вкладок в базу данных
+async function saveTabsHandler() {
+  try {
+    showStatus('saving', true);
+    const tabs = await chrome.tabs.query({});
+    const closeTabs = document.getElementById('close-tabs').checked;
+    
+    // Получаем описание страниц (пока заглушка - можно расширить)
+    const tabsWithDescription = tabs.map(tab => ({
+      ...tab,
+      description: tab.title // временно используем заголовок как описание
+    }));
+    
+    // Сохраняем в базу
+    const savedIds = await TabSorterDB.saveTabs(tabsWithDescription);
+    
+    // Закрываем вкладки, если отмечено
+    let closedCount = 0;
+    if (closeTabs) {
+      // Фильтруем вкладки, которые можно закрыть (не защищённые)
+      const closableTabs = tabs.filter(tab => {
+        const url = tab.url || '';
+        // Защищённые схемы, которые нельзя закрыть
+        const protectedSchemes = [
+          'chrome://', 'about:', 'edge://', 'opera://', 'vivaldi://',
+          'brave://', 'yandex://', 'file://', 'view-source:', 'data:',
+          'javascript:', 'chrome-extension://', 'moz-extension://'
+        ];
+        // Если URL пустой или undefined, считаем защищённым
+        if (!url) return false;
+        return !protectedSchemes.some(scheme => url.startsWith(scheme));
+      });
+      
+      if (closableTabs.length > 0) {
+        const tabIds = closableTabs.map(tab => tab.id);
+        try {
+          await chrome.tabs.remove(tabIds);
+          closedCount = closableTabs.length;
+        } catch (closeError) {
+          // Пытаемся закрыть по одной, пропуская ошибки
+          for (const tab of closableTabs) {
+            try {
+              await chrome.tabs.remove(tab.id);
+              closedCount++;
+            } catch (e) {
+              // Не выводим ошибку в консоль, только предупреждение
+              console.warn('Не удалось закрыть вкладку:', tab.url || 'без URL', e.message);
+            }
+          }
+        }
+      }
+    }
+    
+    // Показываем уведомление
+    const settings = await getSettings();
+    if (settings.showNotifications) {
+      let message = `Сохранено ${savedIds.length} вкладок`;
+      if (closeTabs) {
+        message += `, закрыто ${closedCount}`;
+        if (closedCount < tabs.length) {
+          message += ` (${tabs.length - closedCount} защищённых не закрыто)`;
+        }
+      }
+      chrome.notifications.create({
+        type: 'basic',
+        iconUrl: 'icon128.png',
+        title: 'Tab Sorter',
+        message: message
+      });
+    }
+    
+    showStatus(`saved ${savedIds.length} tabs`, false);
+  } catch (error) {
+    // Не выводим ошибку в консоль, только показываем статус
+    console.warn('Ошибка при сохранении вкладок:', error.message);
+    showStatus('error: save failed', false);
+  }
+}
+
+// Функция для открытия страницы истории
+function openHistoryPage() {
+  chrome.tabs.create({ url: chrome.runtime.getURL('history.html') });
+}
+
+// Функция для сохранения текущей вкладки в избранное
+async function saveToMemoryHandler() {
+  try {
+    showStatus('adding to memory', true);
+    const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+
+    if (!activeTab || !activeTab.url) {
+      showStatus('error: tab not found', false);
+      return;
+    }
+
+    const protectedSchemes = ['chrome://', 'about:', 'edge://', 'opera://', 'vivaldi://',
+      'brave://', 'yandex://', 'file://', 'view-source:', 'data:',
+      'javascript:', 'chrome-extension://', 'moz-extension://'];
+
+    if (protectedSchemes.some(scheme => activeTab.url.startsWith(scheme))) {
+      showStatus('error: protected tab', false);
+      return;
+    }
+
+    const id = await TabSorterDB.saveToMemory({
+      url: activeTab.url,
+      title: activeTab.title,
+      favIconUrl: activeTab.favIconUrl,
+      description: ''
+    });
+    console.log('Saved to memory, id:', id);
+
+    const settings = await getSettings();
+    if (settings.showNotifications) {
+      chrome.notifications.create({
+        type: 'basic',
+        iconUrl: 'icon128.png',
+        title: 'Tab Sorter',
+        message: `Вкладка добавлена в избранное: "${activeTab.title.substring(0, 30)}..."`
+      });
+    }
+
+    showStatus('added to memory', false);
+  } catch (error) {
+    console.warn('Ошибка добавления в избранное:', error.message);
+    showStatus('error: save failed', false);
   }
 }
 
 // Инициализация при загрузке popup
 document.addEventListener('DOMContentLoaded', async () => {
+  console.log('popup initialized');
   // Загружаем настройки
   await loadSettings();
+  // Загружаем тему
+  loadTheme();
   
   // Назначаем обработчики событий
   document.getElementById('sort-now').addEventListener('click', sortTabsHandler);
   document.getElementById('group-tabs').addEventListener('click', groupTabsHandler);
+  document.getElementById('save-tabs').addEventListener('click', saveTabsHandler);
+  document.getElementById('view-history').addEventListener('click', openHistoryPage);
+  document.getElementById('save-to-memory').addEventListener('click', saveToMemoryHandler);
+  document.getElementById('view-memory').addEventListener('click', () => {
+    chrome.tabs.create({ url: chrome.runtime.getURL('history.html?mode=memory') });
+  });
+  
+  // Новые кнопки быстрого доступа
+  document.getElementById('open-history').addEventListener('click', () => {
+    chrome.tabs.create({ url: chrome.runtime.getURL('history.html') });
+  });
+  document.getElementById('open-memory').addEventListener('click', () => {
+    chrome.tabs.create({ url: chrome.runtime.getURL('history.html?mode=memory') });
+  });
   
   // Назначаем обработчик для сохранения настроек при изменении
   document.getElementById('sort-method').addEventListener('change', saveSettingsFromForm);
   document.getElementById('auto-sort').addEventListener('change', saveSettingsFromForm);
   document.getElementById('show-notifications').addEventListener('change', saveSettingsFromForm);
+  document.getElementById('close-tabs').addEventListener('change', saveSettingsFromForm);
+  
+  // Переключатель темы
+  document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
 });
+
+// Загрузка темы
+function loadTheme() {
+  chrome.storage.sync.get({ theme: 'light' }, (items) => {
+    document.documentElement.setAttribute('data-theme', items.theme);
+  });
+}
+
+// Переключение темы
+function toggleTheme() {
+  const currentTheme = document.documentElement.getAttribute('data-theme');
+  const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+  document.documentElement.setAttribute('data-theme', newTheme);
+  chrome.storage.sync.set({ theme: newTheme });
+}

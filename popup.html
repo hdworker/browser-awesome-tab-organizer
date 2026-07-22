@@ -3,106 +3,559 @@
 <head>
   <meta charset="UTF-8">
   <title>Tab Sorter</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
+    :root {
+      --bg-primary: #0a0a0f;
+      --bg-secondary: #111118;
+      --bg-tertiary: #1a1a24;
+      --accent-cyan: #00d4ff;
+      --accent-purple: #b829ff;
+      --accent-green: #00ff88;
+      --accent-amber: #ffaa00;
+      --text-primary: #e8e8f0;
+      --text-secondary: #8888a0;
+      --text-muted: #555570;
+      --border-subtle: #2a2a3a;
+      --border-glow: rgba(0, 212, 255, 0.15);
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --shadow-glow: 0 0 20px rgba(0, 212, 255, 0.1);
+    }
+
+    [data-theme="light"] {
+      --bg-primary: #ffffff;
+      --bg-secondary: #f5f5f7;
+      --bg-tertiary: #e8e8ed;
+      --accent-cyan: #0066ff;
+      --accent-purple: #722ed1;
+      --accent-green: #00a859;
+      --accent-amber: #fa8c16;
+      --text-primary: #1a1a1a;
+      --text-secondary: #595959;
+      --text-muted: #8c8c8c;
+      --border-subtle: #d9d9d9;
+      --border-glow: rgba(0, 102, 255, 0.1);
+      --shadow-glow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
     body {
-      width: 300px;
-      padding: 10px;
-      font-family: Arial, sans-serif;
+      width: 340px;
+      background: var(--bg-primary);
+      font-family: 'Space Grotesk', sans-serif;
+      color: var(--text-primary);
+      font-size: 13px;
+      overflow-x: hidden;
     }
-    
-    h3 {
-      margin-top: 0;
-      text-align: center;
+
+    /* Header */
+    .header {
+      background: var(--bg-secondary);
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border-subtle);
     }
-    
-    .settings-section {
-      margin-bottom: 15px;
+
+    .header-content {
+      display: flex;
+      align-items: center;
+      gap: 10px;
     }
-    
-    .settings-section label {
-      display: block;
-      margin-bottom: 5px;
+
+    .theme-toggle {
+      margin-left: auto;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-subtle);
+      border-radius: 4px;
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 14px;
+      color: var(--text-secondary);
+      transition: all 0.2s ease;
     }
-    
-    .settings-section select {
+
+    .theme-toggle:hover {
+      border-color: var(--accent-cyan);
+      color: var(--accent-cyan);
+    }
+
+    .logo {
+      width: 26px;
+      height: 26px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-subtle);
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 600;
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+
+    .header h3 {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      letter-spacing: 1px;
+    }
+
+    .version {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      color: var(--text-muted);
+      margin-left: auto;
+    }
+
+    /* Main Content */
+    .main-content {
+      padding: 16px 20px;
+    }
+
+    /* Section Labels */
+    .section-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+
+    /* Select */
+    .select-wrapper {
+      position: relative;
+      margin-bottom: 14px;
+    }
+
+    select {
       width: 100%;
-      padding: 5px;
-      margin-bottom: 10px;
+      padding: 8px 12px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      color: var(--text-secondary);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      cursor: pointer;
+      appearance: none;
+      transition: all 0.2s ease;
     }
-    
+
+    select:hover {
+      border-color: var(--text-muted);
+      color: var(--text-primary);
+    }
+
+    select:focus {
+      outline: none;
+      border-color: var(--accent-cyan);
+    }
+
+    .select-wrapper::after {
+      content: '▼';
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 8px;
+      color: var(--text-muted);
+      pointer-events: none;
+    }
+
+    /* Checkbox Group */
     .checkbox-group {
-      margin-bottom: 15px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 16px;
     }
-    
-    .checkbox-group label {
-      display: block;
-      margin-bottom: 5px;
+
+    .checkbox-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 8px;
+      border-radius: var(--radius-sm);
+      transition: all 0.2s ease;
+      cursor: pointer;
     }
-    
+
+    .checkbox-item:hover {
+      background: var(--bg-tertiary);
+    }
+
+    input[type="checkbox"] {
+      appearance: none;
+      width: 14px;
+      height: 14px;
+      background: transparent;
+      border: 1px solid var(--text-muted);
+      border-radius: 3px;
+      cursor: pointer;
+      position: relative;
+      transition: all 0.2s ease;
+    }
+
+    input[type="checkbox"]:checked {
+      background: var(--accent-cyan);
+      border-color: var(--accent-cyan);
+    }
+
+    input[type="checkbox"]:checked::after {
+      content: '✓';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 9px;
+      color: var(--bg-primary);
+      font-weight: bold;
+    }
+
+    .checkbox-item label {
+      flex: 1;
+      cursor: pointer;
+      color: var(--text-muted);
+      font-size: 11px;
+      transition: color 0.2s ease;
+    }
+
+    .checkbox-item:hover label {
+      color: var(--text-secondary);
+    }
+
+    /* Buttons */
     .button-group {
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      gap: 8px;
     }
-    
+
     button {
-      padding: 8px 15px;
+      padding: 10px 14px;
       border: none;
-      border-radius: 4px;
+      border-radius: var(--radius-sm);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
       cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
     }
-    
-    .primary {
-      background-color: #4285f4;
-      color: white;
+
+    .btn-primary {
+      background: var(--bg-tertiary);
+      color: var(--accent-cyan);
+      border: 1px solid var(--border-subtle);
     }
-    
-    .secondary {
-      background-color: #f1f3f4;
-      color: #3c4043;
+
+    .btn-primary:hover {
+      border-color: var(--accent-cyan);
+      background: var(--bg-secondary);
     }
-    
+
+    .btn-secondary {
+      background: var(--bg-tertiary);
+      color: var(--text-secondary);
+      border: 1px solid var(--border-subtle);
+    }
+
+    .btn-secondary:hover {
+      border-color: var(--text-muted);
+      color: var(--text-primary);
+    }
+
+    .btn-amber {
+      background: var(--bg-tertiary);
+      color: var(--accent-amber);
+      border: 1px solid var(--border-subtle);
+    }
+
+    .btn-amber:hover {
+      border-color: var(--accent-amber);
+      background: var(--bg-secondary);
+    }
+
+    .btn-green {
+      background: var(--bg-tertiary);
+      color: var(--accent-green);
+      border: 1px solid var(--border-subtle);
+    }
+
+    .btn-green:hover {
+      border-color: var(--accent-green);
+      background: var(--bg-secondary);
+    }
+
+    /* Divider */
+    .divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--border-subtle), transparent);
+      margin: 20px 0;
+      position: relative;
+    }
+
+    .divider::before {
+      content: '◆';
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 8px;
+      color: var(--accent-cyan);
+      background: var(--bg-primary);
+      padding: 0 8px;
+    }
+
+    /* Section Title */
+    .section-title {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+
+    /* Grid Buttons */
+    .button-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    /* Quick Access */
+    .quick-access {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .btn-quick {
+      padding: 10px 14px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      color: var(--text-secondary);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-align: left;
+    }
+
+    .btn-quick:hover {
+      border-color: var(--accent-cyan);
+      color: var(--accent-cyan);
+      background: var(--bg-secondary);
+    }
+
+    .btn-quick-amber:hover {
+      border-color: var(--accent-amber);
+      color: var(--accent-amber);
+    }
+
+    /* Status */
     .status {
       text-align: center;
-      padding: 10px;
-      margin-top: 10px;
+      padding: 12px;
+      margin-top: 14px;
+      background: var(--bg-secondary);
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--accent-cyan);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--accent-cyan);
+      animation: pulse 2s infinite;
     }
-    
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+
     .hidden {
       display: none;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--bg-secondary);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--border-subtle);
+      border-radius: 3px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--accent-cyan);
     }
   </style>
 </head>
 <body>
-  <h3>Tab Sorter</h3>
-  
-  <div class="settings-section">
-    <label for="sort-method">Метод сортировки:</label>
-    <select id="sort-method">
-      <option value="byTitle">По названию</option>
-      <option value="byDomain">По домену</option>
-      <option value="byLastAccessed">По последнему доступу</option>
-      <option value="byFavicon">По favicon</option>
-      <option value="byProtocol">По протоколу</option>
-    </select>
+    <div class="header">
+      <div class="header-content">
+        <div class="logo">TS</div>
+        <h3>TAB SORTER</h3>
+        <span class="version">v2.0</span>
+        <button id="theme-toggle" class="theme-toggle" title="Toggle theme">◐</button>
+      </div>
+    </div>
+
+    <div class="main-content">
+      <div class="intro">
+        <div class="eyebrow">Рабочее пространство</div>
+        <h1>Управляйте вкладками без шума</h1>
+        <p>Настройте порядок, сохраните сессию или быстро откройте архив.</p>
+      </div>
+
+      <div class="section-label">Сортировка</div>
+    
+    <div class="select-wrapper">
+      <select id="sort-method">
+        <option value="byTitle">По названию</option>
+        <option value="byDomain">По домену</option>
+        <option value="byLastAccessed">По последнему доступу</option>
+        <option value="byFavicon">По favicon</option>
+        <option value="byProtocol">По протоколу</option>
+      </select>
+    </div>
+    
+    <div class="checkbox-group">
+      <div class="checkbox-item">
+        <input type="checkbox" id="auto-sort">
+        <label for="auto-sort">Сортировать автоматически</label>
+      </div>
+      <div class="checkbox-item">
+        <input type="checkbox" id="show-notifications">
+        <label for="show-notifications">Показывать уведомления</label>
+      </div>
+    </div>
+    
+    <div class="button-group">
+      <button id="sort-now" class="btn-primary">Отсортировать вкладки</button>
+      <button id="group-tabs" class="btn-secondary">Сгруппировать по домену</button>
+      <button id="save-to-memory" class="btn-amber">Добавить в избранное</button>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="section-title">Сохранение сессии</div>
+    
+    <div class="checkbox-item" style="margin-bottom: 12px;">
+      <input type="checkbox" id="close-tabs" checked>
+      <label for="close-tabs">Закрыть вкладки после сохранения</label>
+    </div>
+    
+    <div class="button-grid">
+      <button id="save-tabs" class="btn-green">Сохранить сессию</button>
+      <button id="view-history" class="btn-secondary">История</button>
+      <button id="view-memory" class="btn-amber" style="grid-column: span 2;">Избранное</button>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="quick-access">
+      <button id="open-history" class="btn-quick">Открыть историю <span>→</span></button>
+      <button id="open-memory" class="btn-quick btn-quick-amber">Открыть избранное <span>→</span></button>
+    </div>
+    
+    <div id="status" class="status hidden">[ PROCESSING... ]</div>
   </div>
+
+  <style>
+    /* A calm, compact surface for the popup. The existing class names stay intact for JS. */
+    :root {
+      --bg-primary: #f7f8fa;
+      --bg-secondary: #ffffff;
+      --bg-tertiary: #eef1f5;
+      --accent-cyan: #246bce;
+      --accent-purple: #246bce;
+      --accent-green: #147d5a;
+      --accent-amber: #a96512;
+      --text-primary: #182230;
+      --text-secondary: #536174;
+      --text-muted: #8793a3;
+      --border-subtle: #dfe4eb;
+      --border-glow: rgba(36, 107, 206, .16);
+      --shadow-glow: 0 8px 24px rgba(25, 42, 66, .08);
+      --radius-sm: 8px;
+      --radius-md: 14px;
+    }
+    [data-theme="dark"] {
+      --bg-primary: #12161c;
+      --bg-secondary: #1a2028;
+      --bg-tertiary: #242c36;
+      --accent-cyan: #7db2ff;
+      --accent-purple: #7db2ff;
+      --accent-green: #63cda6;
+      --accent-amber: #eab56d;
+      --text-primary: #edf2f7;
+      --text-secondary: #b1bdca;
+      --text-muted: #7e8a99;
+      --border-subtle: #303a47;
+      --border-glow: rgba(125, 178, 255, .18);
+      --shadow-glow: 0 10px 28px rgba(0, 0, 0, .22);
+    }
+    body { width: 360px; background: var(--bg-primary); font-family: 'Space Grotesk', sans-serif; color: var(--text-primary); }
+    .header { background: var(--bg-secondary); padding: 15px 18px; border-bottom: 1px solid var(--border-subtle); }
+    .logo { background: var(--accent-cyan); border: 0; border-radius: 8px; color: #fff; font-family: 'Space Grotesk', sans-serif; font-size: 12px; }
+    .header h3 { color: var(--text-primary); font-family: 'Space Grotesk', sans-serif; font-weight: 700; letter-spacing: .5px; }
+    .theme-toggle { border-radius: 8px; background: var(--bg-tertiary); color: var(--text-secondary); }
+    .main-content { padding: 20px; }
+    .intro { padding: 2px 0 22px; }
+    .eyebrow, .section-label, .section-title { color: var(--accent-cyan); font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 1.2px; text-transform: uppercase; }
+    .intro h1 { margin-top: 8px; font-size: 21px; line-height: 1.15; letter-spacing: -.5px; }
+    .intro p { margin-top: 7px; color: var(--text-secondary); font-size: 12px; line-height: 1.45; }
+    .section-label { margin-bottom: 8px; color: var(--text-muted); }
+    select { padding: 11px 13px; background: var(--bg-secondary); color: var(--text-primary); border-color: var(--border-subtle); font-family: 'Space Grotesk', sans-serif; font-size: 13px; box-shadow: 0 2px 4px rgba(20, 35, 55, .03); }
+    .checkbox-group { gap: 2px; margin: 10px 0 17px; }
+    .checkbox-item { padding: 8px 9px; gap: 10px; }
+    .checkbox-item label { color: var(--text-secondary); font-family: 'Space Grotesk', sans-serif; font-size: 12px; }
+    input[type="checkbox"] { width: 16px; height: 16px; background: var(--bg-secondary); border-color: #aeb9c6; }
+    input[type="checkbox"]:checked { background: var(--accent-cyan); border-color: var(--accent-cyan); }
+    .button-group { gap: 7px; }
+    button { border-radius: 8px; font-family: 'Space Grotesk', sans-serif; font-size: 12px; font-weight: 600; }
+    .btn-primary { background: var(--accent-cyan); color: #fff; border-color: var(--accent-cyan); box-shadow: 0 3px 8px var(--border-glow); }
+    .btn-primary:hover { background: #1859b4; border-color: #1859b4; }
+    .btn-secondary, .btn-amber, .btn-green { background: var(--bg-secondary); color: var(--text-secondary); border-color: var(--border-subtle); }
+    .btn-secondary:hover { border-color: var(--accent-cyan); color: var(--accent-cyan); }
+    .btn-amber { color: var(--accent-amber); }
+    .btn-amber:hover { border-color: var(--accent-amber); background: var(--bg-secondary); }
+    .btn-green { color: var(--accent-green); }
+    .btn-green:hover { border-color: var(--accent-green); background: var(--bg-secondary); }
+    .divider { margin: 22px 0; background: var(--border-subtle); }
+    .divider::before { content: ''; padding: 0; }
+    .section-title { margin-bottom: 8px; color: var(--text-muted); }
+    .button-grid { gap: 7px; }
+    .quick-access { gap: 5px; margin-top: 2px; }
+    .btn-quick { padding: 10px 11px; background: transparent; border: 0; color: var(--text-secondary); font-size: 12px; }
+    .btn-quick span { float: right; color: var(--text-muted); font-size: 16px; line-height: 12px; }
+    .btn-quick:hover { background: var(--bg-secondary); color: var(--accent-cyan); }
+    .btn-quick-amber:hover { color: var(--accent-amber); }
+    .status { margin-top: 14px; padding: 10px; background: var(--bg-secondary); border-color: var(--accent-cyan); color: var(--accent-cyan); box-shadow: var(--shadow-glow); }
+  </style>
   
-  <div class="checkbox-group">
-    <label>
-      <input type="checkbox" id="auto-sort"> Автоматическая сортировка
-    </label>
-    <label>
-      <input type="checkbox" id="show-notifications"> Показывать уведомления
-    </label>
-  </div>
-  
-  <div class="button-group">
-    <button id="sort-now" class="primary">Сортировать вкладки</button>
-    <button id="group-tabs" class="secondary">Группировать по доменам</button>
-  </div>
-  
-  <div id="status" class="status hidden">Сортировка...</div>
-  
+  <script src="src/utils/database.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>
